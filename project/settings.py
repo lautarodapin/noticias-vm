@@ -29,6 +29,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", cast=bool)
+AUTH_USER_MODEL = 'users.User'
 
 ALLOWED_HOSTS = ["*"]
 
@@ -46,7 +47,12 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
+    'api.apps.ApiConfig',
+    'chat.apps.ChatConfig',
+    'users.apps.UsersConfig',
+    'news.apps.NewsConfig',
 ]
 
 MIDDLEWARE = [
