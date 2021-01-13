@@ -16,9 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path
 from django.shortcuts import render
+from graphene_django.views import GraphQLView
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
 
     path('', lambda r: render(r, 'index.html')),
     re_path(r'^.*/', lambda r: render(r, 'index.html')),

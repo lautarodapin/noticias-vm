@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    # 'tinymce',
     'api.apps.ApiConfig',
     'chat.apps.ChatConfig',
     'users.apps.UsersConfig',
@@ -191,8 +192,8 @@ INSTALLED_APPS += ('project', 'django_celery_beat',)
 
 
 # GRAPHNE
-# GRAPHENE = {
-#     "SCHEMA": "",
-#     "MIDDLEWARE":[
-#     ],
-# }
+GRAPHENE = {
+    "SCHEMA": "api.schema.schema",
+    "MIDDLEWARE":[
+    ],
+}
