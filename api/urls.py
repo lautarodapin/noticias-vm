@@ -3,6 +3,7 @@ from django.urls import path, re_path
 from .views import *
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
+from django.views.decorators.csrf import csrf_exempt
 
 app_name = 'api'
 router = DefaultRouter()
@@ -13,7 +14,8 @@ router.register(r'nota', NotaViewSet, basename="nota")
 router.register(r'comentario', ComentarioViewSet, basename="comentario")
 
 urlpatterns = [
-    path('auth/', obtain_auth_token),
+    # path('auth/', csrf_exempt(obtain_auth_token)),
+    path('auth/', csrf_exempt(ExtendedObtainAuthToken.as_view())),
 ]
 
 urlpatterns += router.urls
