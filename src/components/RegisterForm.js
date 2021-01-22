@@ -30,7 +30,10 @@ export function RegisterForm(props) {
         e.preventDefault()
         fetch(`/api/users/`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", 'X-CSRFToken': getCookie("csrftoken")},
+            headers: { 
+                "Content-Type": "application/json",
+                // 'X-CSRFToken': getCookie("csrftoken")
+            },
             body: JSON.stringify({
                 username: username,
                 password: password,

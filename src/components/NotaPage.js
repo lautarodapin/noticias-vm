@@ -44,8 +44,8 @@ export function NotaPage() {
         headers: { 
             'Accept': 'application/json', 
             'Content-Type': 'application/json', 
-            Authorization: `JWT ${localStorage.getItem("token")}`, 
-            'X-CSRFToken': getCookie("csrftoken"),},// 'X-CSRFToken': $(token).val(), },
+            Authorization: `Token ${localStorage.getItem("noticias-vm-token")}`, 
+        },
         body:JSON.stringify({
             titulo:titulo,
             subtitulo:subtitulo,

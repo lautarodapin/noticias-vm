@@ -1,5 +1,6 @@
 
 import json
+from django.shortcuts import get_object_or_404
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils.timezone import now
@@ -31,7 +32,7 @@ class UserConsumerObserver(GenericAsyncAPIConsumer):
 class RoomConsumer(ObserverModelInstanceMixin, GenericAsyncAPIConsumer):
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
-
+    lookup_field = "code"
     # async def accept(self, **kwargs):
     #     await super().accept(**kwargs)
 
@@ -41,27 +42,38 @@ class RoomConsumer(ObserverModelInstanceMixin, GenericAsyncAPIConsumer):
             await self.notify_users()
         await super().disconnect(code)
 
+
+    # def retrieve(self, **kwargs):
+    #     instance = self.get_object(**kwargs)
+    #     serializer = self.get_serializer(instance=instance, action_kwargs=kwargs)
+    #     return serializer.data, status.HTTP_200_OK
+
+    def get_object(self, **kwargs) -> Room:
+        return get_object_or_404(Room, code=kwargs["code"])
+
+
     @action()
-    async def join_room(self, pk, **kwargs):
-        self.room_subscribe = pk
-        await self.add_user_to_room(pk)
+    async def join_room(self, code, **kwargs):
+        self.room_subscribe = code
+        await self.add_user_to_room(code)
         await self.notify_users()
-
-    @action()
-    async def create_message(self, message, **kwargs):
-        await database_sync_to_async(Message.objects.create)(
-            room_id=self.room_subscribe, 
-            user=self.scope["user"],
-            text=message)
-
-    @action()
-    async def subscribe_to_messages_in_room(self, pk, **kwargs):
-        self.room_subscribe:int = pk
-        await self.message_activity.subscribe(room=pk)
 
     @action()
     async def leave_room(self, pk, **kwargs):
         await self.remove_user_from_room(pk)
+
+    @action()
+    async def create_message(self, message, **kwargs):
+        room:Room = await self.get_room(code=self.room_subscribe)
+        await database_sync_to_async(Message.objects.create)(
+            room=room, 
+            user=self.scope["user"],
+            text=message)
+
+    @action()
+    async def subscribe_to_messages_in_room(self, code, **kwargs):
+        room : Room = await self.get_room(code)
+        await self.message_activity.subscribe(room=room.pk)
 
     @model_observer(Message)
     async def message_activity(self, message, observer=None, **kwargs):
@@ -79,7 +91,7 @@ class RoomConsumer(ObserverModelInstanceMixin, GenericAsyncAPIConsumer):
 
     @message_activity.serializer
     def message_activiy(self, instance:Message, action, **kwargs):
-        return MessageSerializer(instance).data
+        return dict(data=MessageSerializer(instance).data, action=action.value, pk=instance.pk)
 
     async def notify_users(self):
         room:Room = await self.get_room(self.room_subscribe)
@@ -96,8 +108,8 @@ class RoomConsumer(ObserverModelInstanceMixin, GenericAsyncAPIConsumer):
         await self.send(text_data=json.dumps({'usuarios':event["usuarios"]}))
   
     @database_sync_to_async
-    def get_room(self, room:int)->Room:
-        return Room.objects.get(pk=room)
+    def get_room(self, code:str)->Room:
+        return Room.objects.get(code=code)
 
     @database_sync_to_async
     def current_users(self, room:Room):
@@ -109,7 +121,7 @@ class RoomConsumer(ObserverModelInstanceMixin, GenericAsyncAPIConsumer):
         user.current_rooms.remove(room)
 
     @database_sync_to_async
-    def add_user_to_room(self, room):
+    def add_user_to_room(self, code):
         user:Usuario = self.scope["user"]
-        if not user.current_rooms.filter(pk=self.room_subscribe).exists():
-            user.current_rooms.add(room)
+        if not user.current_rooms.filter(code=self.room_subscribe).exists():
+            user.current_rooms.add(Room.objects.get(code=code))

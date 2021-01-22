@@ -28,7 +28,7 @@ const Room = (props) => {
 						Room "{room.nombre}"
 					</li>
 					{current_users?.map(user => (
-						<li class="list-group-item">
+						<li key={user.id} className="list-group-item">
 							{user.username}
 						</li>
 					))}
@@ -45,7 +45,12 @@ const RoomForm = (props) => {
 	const submitHandler = () => {
 		fetch(`/api/rooms/`, {
 			method: "POST",
-			headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRFToken': getCookie("csrftoken"),},//'X-CSRFToken': $(token).val(), },
+			headers: { 
+				'Accept': 'application/json', 
+				'Content-Type': 'application/json', 
+				Authorization: `Token ${localStorage.getItem("noticias-vm-token")}`,
+				// 'X-CSRFToken': getCookie("csrftoken"),
+			},//'X-CSRFToken': $(token).val(), },
 			body: JSON.stringify({ nombre: nombre })
 		})
 			.then(response => response.json())
@@ -94,7 +99,7 @@ export function RoomList() {
 			<Box component="div" overflow="auto" maxHeight="50vh">
 			{
 				room?.map((item) => (
-					<Room room={item} />
+					<Room key={item.id} room={item} />
 					))
 				}
 		</Box>

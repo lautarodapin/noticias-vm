@@ -22,7 +22,7 @@ const CommentForm = (props)=>{
 			// 'Accept': 'application/json', 
 			'Content-Type': 'application/json', 
 			// 'X-CSRFToken': $(token).val(), 
-			Authorization: `JWT ${localStorage.getItem("token")}`
+			Authorization: `Token ${localStorage.getItem("noticias-vm-token")}`
 		},
 		body:JSON.stringify({
 			cuerpo:cuerpo,

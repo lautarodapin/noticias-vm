@@ -1,86 +1,145 @@
-import React, { Component, useEffect, useRef, useState } from "react";
+import React, { Component, useEffect, useRef, useState, useContext } from "react";
 import { GridList, GridListTile, List, ListItem, Paper, Card, CardContent, 
 	Grid, Button, ButtonGroup, Typography, TextField, FormControl } from "@material-ui/core";
 import {BrowserRouter as Router,Switch,Route,Link,Redirect,useParams,
 } from "react-router-dom";
-import Chat from './Chat.js';
-import ChatUsers from './ChatUsers.js';
 import { AlwaysScrollToBottom } from "./utils/AlwaysScrollToBottom";
 import { getCookie } from "./utils/GetCookie";
 import {host, protocol, ws_scheme, api} from "../globals";
 
+
 export function Room() {
-    const api = `${window.location.protocol}//${window.location.protocol === "https:"?window.location.host:"localhost:8000"}`;
-	const ws_scheme = window.location.protocol === "https:"?"wss":"ws";
-	const host = window.location.protocol === "https:"?window.location.host:"localhost:8000";//"localhost:8000"//window.location.host; // todo chequear 
 	let params = useParams(); // params.room
+	const token = localStorage.getItem("noticias-vm-token");
 	const room_code = params.room;
+	const [ws, setWs] = useState(()=>new WebSocket(`ws://localhost:8000/ws/`, token));
 	const [room, setRoom] = useState(null);
 	const [messages, setMessages] = useState();
 	const [users, setUsers] = useState(null);
 	const [messageText, setMessageText] = useState(null);
-	const [ws, setWs] = useState(()=> new WebSocket(`${ws_scheme}://${host}/ws/messages/`))
 	const updateMessageText = (e)=>setMessageText(e.target.value)
 
-	const getRoom = () => fetch(`${api}/api/rooms/?code=${room_code}`)
+	const getRoom = () => fetch(`http://localhost:8000/api/rooms/?code=${room_code}`)
 	.then((data) => data.json()).then(data=>{
 		setRoom(data[0]);
 		setMessages(data[0].messages);
 	});
 	
-	useEffect(() => getRoom(), []);
-
-
+	// useEffect(() => getRoom(), []);
+	// useEffect(()=>initWs(), []);
+	
 	const enterPress = (e) => e.keyCode === 13?submitMessage():null;
 
 	const submitMessage = ()=>{
 		console.log(messageText)
 		if (messageText != null){
 			ws.send(JSON.stringify({
-				action:"create_message",
-				message:messageText,
-				request_id:getCookie("csrftoken"),
+				stream:"room",
+				payload:{
+					action:"create_message",
+					message:messageText,
+					request_id:token,
+				},
 			}));
 		}
 		setMessageText("");
 	};
 
-	ws.onmessage = function (e) {
-		const data = JSON.parse(e.data);
-		console.log(data);
-		if ("data" in data && data.data != null){
-			setUsers(data.data.current_users);
+	
+
+		ws.onmessage = function (e) {
+			const message = JSON.parse(e.data);
+			const payload = message.payload;
+			const stream = message.stream;
+			console.log(message)
+			switch (stream) {
+				case "room":
+					switch (payload.action) {
+						case "retrieve":
+							setRoom(old =>payload.data);
+							setMessages(old=>payload.data.messages);
+							break;
+						
+						case "create":
+							setMessages(old=>[...old, payload.data])
+							break;
+						default:
+							break;
+					}
+					break;
+			
+				default:
+					break;
+			}
+
+			// console.log(data);
+			// if ("data" in data && data.data != null){
+			// 	setUsers(data.data.current_users);
+			// }
+			// if ("usuarios" in data && data.usuarios != null){
+			// 	setUsers(data.usuarios);
+			// }
+			// if (data.action === "create" && data.type==="message.activity"){
+			// 	setMessages(oldMessages=>[...oldMessages, data]);
+			// }
 		}
-		if ("usuarios" in data && data.usuarios != null){
-			setUsers(data.usuarios);
+		ws.onopen = function () {
+			// if (room!=null){
+				ws.send(JSON.stringify({
+					stream:"room",
+					payload:{
+						code:room_code,
+						action:"join_room",
+						request_id:token,
+					}
+				}))
+				ws.send(JSON.stringify({
+					stream:"room",
+					payload:{
+						code:room_code,
+						action:"retrieve",
+						request_id:token,
+					}
+				}))
+				ws.send(JSON.stringify({
+					stream:"room",
+					payload:{
+						code:room_code,
+						action:"subscribe_to_messages_in_room",
+						request_id:token,
+					}
+				}))
+				ws.send(JSON.stringify({
+					stream:"room",
+					payload:{
+						code:room_code,
+						action:"subscribe_instance",
+						request_id:token,
+					}
+				}))
+			// }
+			// if (room != null){
+			// 	ws.send(JSON.stringify({
+			// 		pk: room.pk,
+			// 		action: "join_room",
+			// 		request_id: getCookie("csrftoken"),
+			// 	}));
+			// 	ws.send(JSON.stringify({
+			// 		action: "subscribe_instance",
+			// 		pk: room.pk,
+			// 		request_id: getCookie("csrftoken"),
+			// 	}));
+			// 	ws.send(JSON.stringify({
+			// 		action: "subscribe_to_messages_in_room",
+			// 		pk: room.pk,
+			// 		request_id: getCookie("csrftoken"),
+			// 	}));
+			// }
 		}
-		if (data.action === "create" && data.type==="message.activity"){
-			setMessages(oldMessages=>[...oldMessages, data]);
-		}
-	}
-	ws.onopen = function () {
-		if (room != null){
-			ws.send(JSON.stringify({
-				pk: room.pk,
-				action: "join_room",
-				request_id: getCookie("csrftoken"),
-			}));
-			ws.send(JSON.stringify({
-				action: "subscribe_instance",
-				pk: room.pk,
-				request_id: getCookie("csrftoken"),
-			}));
-			ws.send(JSON.stringify({
-				action: "subscribe_to_messages_in_room",
-				pk: room.pk,
-				request_id: getCookie("csrftoken"),
-			}));
-		}
-	}
-	ws.onclose = function (e) {
-		console.error('Chat socket closed unexpectedly');
-		setTimeout(() =>setWs(new WebSocket(`${ws_scheme}://${host}/ws/messages/`)), 1000 * 10);
-	};
+		ws.onclose = function (e) {
+			console.error('Chat socket closed unexpectedly');
+			setTimeout(() =>setWs(new WebSocket(`${ws_scheme}://localhost:8000/ws/messages/`, token)), 1000 * 10);
+		};
 
 
 

@@ -13,9 +13,12 @@ router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'nota', NotaViewSet, basename="nota")
 router.register(r'comentario', ComentarioViewSet, basename="comentario")
 
+
 urlpatterns = [
     # path('auth/', csrf_exempt(obtain_auth_token)),
     path('auth/', csrf_exempt(ExtendedObtainAuthToken.as_view())),
+    path('login/', LoginView.as_view()),
+    path('get-csrf-token/', set_csrf_token),
 ]
 
 urlpatterns += router.urls
